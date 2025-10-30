@@ -24,7 +24,7 @@ jobs:
       
       - name: Install dependencies
         working-directory: ./my-app
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
       
       - name: Run linting
         working-directory: ./my-app
