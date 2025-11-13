@@ -66,14 +66,42 @@ jobs:
           envs: IMAGE,CONTAINER_NAME
           script: |
             set -eux
-            # 念のためデフォルト（env 未設定でも落ちないように）
+
+            echo "Checking Docker installation..."
+
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "Docker not found. Installing..."
+
+              # Amazon Linux 2023
+              if grep -q "Amazon Linux" /etc/os-release && grep -q "2023" /etc/os-release; then
+                sudo dnf update -y
+                sudo dnf install -y docker
+              # Amazon Linux 2
+              elif grep -q "Amazon Linux" /etc/os-release; then
+                sudo yum update -y
+                sudo amazon-linux-extras install -y docker
+                sudo yum install -y docker
+              # Ubuntu
+              elif [ -f /etc/debian_version ]; then
+                sudo apt-get update -y
+                sudo apt-get install -y docker.io
+              else
+                echo "Unknown OS. Please install Docker manually."
+                exit 1
+              fi
+            fi
+
+            echo "Starting Docker service..."
+            sudo systemctl enable --now docker || true
+
+            echo "Pulling and starting container..."
+
             IMAGE="${IMAGE:-ghcr.io/${GITHUB_REPOSITORY}}"
             CONTAINER_NAME="${CONTAINER_NAME:-nextjs-app}"
 
-            sudo systemctl enable --now docker || true
-
             docker pull "$IMAGE:latest"
             docker rm -f "$CONTAINER_NAME" || true
+
             docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
               -p 80:3000 "$IMAGE:latest"
       - name: "Trigger Lambda (deployment success)"
