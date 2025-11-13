@@ -72,10 +72,19 @@ jobs:
 
             sudo systemctl enable --now docker || true
 
-            # GHCR が private の場合はログイン（public なら不要）
-            # echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-
             docker pull "$IMAGE:latest"
             docker rm -f "$CONTAINER_NAME" || true
             docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
               -p 80:3000 "$IMAGE:latest"
+      - name: "Trigger Lambda (deployment success)"
+        if: success()
+        env:
+          LAMBDA_URL: ${{ secrets.LAMBDA_URL }}
+        run: |
+          curl -X POST "$LAMBDA_URL" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "status": "success",
+            "service": "nextjs-app",
+            "environment": "githubaction"
+          }'
