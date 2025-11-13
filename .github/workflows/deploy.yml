@@ -94,15 +94,19 @@ jobs:
             echo "Starting Docker service..."
             sudo systemctl enable --now docker || true
 
+            echo "Ensuring current user can run Docker..."
+            # Add current user to docker group (helps for manual SSH usage later)
+            sudo usermod -aG docker "$USER" || true
+
             echo "Pulling and starting container..."
 
             IMAGE="${IMAGE:-ghcr.io/${GITHUB_REPOSITORY}}"
             CONTAINER_NAME="${CONTAINER_NAME:-nextjs-app}"
 
-            docker pull "$IMAGE:latest"
-            docker rm -f "$CONTAINER_NAME" || true
+            sudo docker pull "$IMAGE:latest"
+            sudo docker rm -f "$CONTAINER_NAME" || true
 
-            docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
+            sudo docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
               -p 80:3000 "$IMAGE:latest"
       - name: "Trigger Lambda (deployment success)"
         if: success()
